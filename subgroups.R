@@ -19,8 +19,10 @@ boot <- function(time,status,response,data,runs,size){
 }
 
 ## AF
-# EHR-AF ('time' = censored survival time, 'status' = outcome status, 'response' = classifier)
-boot_score <- boot(time='af_5y_sal.t',status='af_5y_sal',response='score',data=vs[vs$Gender=='Female',],runs=1,size=nrow(vs[vs$Gender=='Female',]))
+# EHR-AF ('time' = censored survival time, 'status' = outcome status, 'response' = classifier) by SEX
+boot_score_f <- boot(time='af_5y_sal.t',status='af_5y_sal',response='score',data=vs[vs$Gender=='Female',],runs=200,size=nrow(vs[vs$Gender=='Female',]))
+boot_score_m <- boot(time='af_5y_sal.t',status='af_5y_sal',response='score',data=vs[vs$Gender=='Male',],runs=200,size=nrow(vs[vs$Gender=='Male',]))
 
 # Final AUC and 95% CI (1st value = AUC, 2nd value = Lower bound of 95% CI, 3rd value = Upper bound of 95% CI)
-auc_score <- c(mean(boot_score),mean(boot_score)-1.96*sd(boot_score),mean(boot_score)+1.96*sd(boot_score))
+auc_score_f <- c(mean(boot_score_f),mean(boot_score_f)-1.96*sd(boot_score_f),mean(boot_score_f)+1.96*sd(boot_score_f))
+auc_score_m <- c(mean(boot_score_m),mean(boot_score_m)-1.96*sd(boot_score_m),mean(boot_score_m)+1.96*sd(boot_score_m))
