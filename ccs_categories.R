@@ -338,3 +338,25 @@ ifelse((ccs %in% 245:253),17.1,
 ifelse((ccs %in% 254:258),17.2,
 ifelse((ccs %in% 259:260),18,
 ifelse((ccs_level1 == 18),18,(ccs_level2)))))))))))))))))))))))))))))))]
+
+# Add names for raw ccs classes
+## Load lookup table
+ccs_lookup <- fread(file='/Volumes/medpop_afib/skhurshid/broad_afrisk/CCS_2015_categories_august_1_2017.csv')
+setDF(ccs_lookup); setDF(ccs_master)
+
+## Loop over and select names
+ccs_master$ccs_name <- rep(NA,nrow(ccs_master))
+for (i in 1:nrow(ccs_master)){
+  exit_j <- 0
+  for (j in 1:length(ccs_lookup$V1)){
+    if (exit_j == 1) {
+      break
+    } else if (ccs_master$ccs[i] == ccs_lookup$V1[j]) {
+      ccs_master$ccs_name[i] <- ccs_lookup$V2[j]
+      exit_j <- 1
+    }}
+}
+
+# Save out
+save(ccs_master,file='/Volumes/medpop_afib/skhurshid/broad_afrisk/ccs_master_102519.RData')
+write.csv(ccs_master,file='/Volumes/medpop_afib/skhurshid/broad_afrisk/ccs_master_102519.csv')
