@@ -357,6 +357,40 @@ for (i in 1:nrow(ccs_master)){
     }}
 }
 
+# Format ICD codes for PHS 
+## Put in the period
+ccs_master$code <- with(ccs_master,ifelse(nchar(code)==3,code,
+                            ifelse(nchar(code)==4,paste0(substr(code,1,3),'.',substr(ccs_master$code,4,4)),
+                                   ifelse(nchar(code)==5,paste0(substr(code,1,3),'.',substr(ccs_master$code,4,5)),
+                                          ifelse(nchar(code)==6,paste0(substr(code,1,3),'.',substr(ccs_master$code,4,6)),
+                                                 ifelse(nchar(code)==7,paste0(substr(code,1,3),'.',substr(ccs_master$code,4,7)),NA))))))
+
+## Reformat code types
+ccs_master[,code_type := paste0('ICD',as.character(code_type))]
+
+## Add indicator for level of CCS for disambiguation
+ccs_master[,':='(ccs_name = paste0('ccs3_',ccs_name),
+                 ccs_name_level1 = paste0('ccs1_',ccs_name_level1),
+                 ccs_name_level2 = paste0('ccs2_',ccs_name_level2))]
+
+# Parse into subcomponents for covariate make files
+ccs_individual <- ccs_master[,c('ccs_name','code','code_type')]
+setnames(ccs_individual,c('ccs_name','code','code_type'),c('cov','cov.code','cov.code.type'))
+
+ccs_subgroup <- ccs_master[,c('ccs_name_level2','code','code_type')]
+setnames(ccs_subgroup,c('ccs_name_level2','code','code_type'),c('cov','cov.code','cov.code.type'))
+
+ccs_group <- ccs_master[,c('ccs_name_level1','code','code_type')]
+setnames(ccs_group,c('ccs_name_level1','code','code_type'),c('cov','cov.code','cov.code.type'))
+
+ccs_all <- rbind(ccs_group,ccs_subgroup,ccs_individual)
+
 # Save out
 save(ccs_master,file='/Volumes/medpop_afib/skhurshid/broad_afrisk/ccs_master_102519.RData')
 write.csv(ccs_master,file='/Volumes/medpop_afib/skhurshid/broad_afrisk/ccs_master_102519.csv')
+
+# Save out subcomponents for covariate make files
+write.csv(ccs_individual,file='/Volumes/homedir$/MGH Research/IBM_Broad_afrisk_validation/ccs_individual_102519.csv')
+write.csv(ccs_subgroup,file='/Volumes/homedir$/MGH Research/IBM_Broad_afrisk_validation/ccs_subgroup_102519.csv')
+write.csv(ccs_group,file='/Volumes/homedir$/MGH Research/IBM_Broad_afrisk_validation/ccs_group_102519.csv')
+write.csv(ccs_all,file='/Volumes/homedir$/MGH Research/IBM_Broad_afrisk_validation/ccs_all_102519.csv')
