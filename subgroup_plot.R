@@ -8,26 +8,28 @@ hf <- fread('/data/arrhythmia/skhurshid/broad_ibm_afrisk/hf.csv')
 stroke <- fread('/data/arrhythmia/skhurshid/broad_ibm_afrisk/stroke.csv')
 
 # Create all
-all <- data.frame(Score_Name='EHR_AF_Final',Low_CI=0.780,CI_value=0.781,High_CI=0.782,N_outcome=152205,
-                  N_selected_population=4510814,Outcome_inc=NA,N_total=4510814)
+all <- data.frame(Score_Name='EHR_AF_Final',Low_CI=0.782,CI_value=0.783,High_CI=0.784,N_outcome=153151,
+                  N_selected_population=4508180,Outcome_inc=NA,N_total=4508180)
 
 # Collapse EHR_AF results only
-ehr <- rbind(f[Score_Name=='EHR_AF_Final'],m[Score_Name=='EHR_AF_Final'],
-             stroke[Score_Name=='EHR_AF_Final'],hf[Score_Name=='EHR_AF_Final'],all[1,])
-ehr$subgroup <- c('Females','Males','Stroke','Heart failure','Overall')
+ehr <- rbind(all[1,],hf[Score_Name=='EHR_AF_Final'],
+             stroke[Score_Name=='EHR_AF_Final'],
+             m[Score_Name=='EHR_AF_Final'],f[Score_Name=='EHR_AF_Final'])
+ehr$subgroup <- c('Overall','Heart failure','Stroke','Males','Females')
 
 # Plot
-png('/data/arrhythmia/skhurshid/broad_ibm_afrisk/subgroup.png',height=350,width=800,res=100)
+pdf('/data/arrhythmia/skhurshid/broad_ibm_afrisk/subgroup.pdf',height=1.5,width=4.4,
+    pointsize=3)
 par(oma=c(1,1,1,1))
-par(mar=c(3,19,1,1))
-col <- c('#e31a1c','#1f78b4','#33a02c','#ff7f00','black')
-plot(x=ehr$CI_value,y=seq(5,1,-1),xlim=c(0.600,0.820),ylim=c(0.75,5.25),
+par(mar=c(3,17,1,1))
+col <- c('black','#1f78b4','#33a02c','#ff7f00','#e31a1c')
+plot(x=ehr$CI_value,y=seq(1,5,1),xlim=c(0.600,0.805),ylim=c(0.75,5.25),
      xaxt='n',yaxt='n',xlab='',ylab='',pch=19,col=col,cex=1.4)
-axis(1,at=seq(0.600,0.820,0.020),cex=1.4)
+axis(1,at=seq(0.600,0.825,0.025),cex=1.4)
 axis(2,at=1:18,labels=FALSE,cex=1.4)
-mtext('Subgroup',side=2,line=18.5,cex=1.3)
+mtext('Subgroup',side=2,line=16.5,cex=1.3)
 mtext('Concordance',side=1,line=2.5,cex=1.3)
-segments(ehr$Low_CI,5:1,ehr$High_CI,5:1,col=col,lwd=2.2)
+segments(ehr$Low_CI,1:5,ehr$High_CI,1:5,col=col,lwd=2.2)
 
 plot_names <- c('overall','heart failure','stroke','male','female')
 for (i in 1:length(plot_names)){

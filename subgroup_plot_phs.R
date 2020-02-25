@@ -41,7 +41,7 @@ c_overall <- c(summary(coxph(Surv(af_5y_sal.t,af_5y_sal) ~ score,data=vs))$conco
 c_all <- rbind(c_f,c_m,c_stroke,c_hf,c_overall)
 
 # Plot
-png('/data/arrhythmia/skhurshid/broad_ibm_afrisk/subgroup_phs.png',height=2,width=3.8,res=300,
+pdf('/data/arrhythmia/skhurshid/broad_ibm_afrisk/subgroup_phs.pdf',height=3,width=4,res=300,
     units='in',pointsize=6)
 
 par(oma=c(1,1,1,1))
