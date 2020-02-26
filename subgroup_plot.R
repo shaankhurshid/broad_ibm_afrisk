@@ -31,7 +31,7 @@ mtext('Subgroup',side=2,line=16.5,cex=1.3)
 mtext('Concordance',side=1,line=2.5,cex=1.3)
 segments(ehr$Low_CI,1:5,ehr$High_CI,1:5,col=col,lwd=2.2)
 
-plot_names <- c('overall','heart failure','stroke','male','female')
+plot_names <- c('Overall','Heart failure','Stroke','Male','Female')
 for (i in 1:length(plot_names)){
   mtext(paste0(plot_names[i],' (N=',ehr$N_selected_population[i],'; AF=',ehr$N_outcome[i],')'),
         side=2,line=1,las=2,at=i)
