@@ -17,8 +17,8 @@ cases <- count(incident_af$pred_risk_CHA2DS2_VASc_Final)
 cases_probs <- cases[,2] / nrow(cases)
 
 x <- factor(0:(length(cases_probs)-1))
-y1 <- controls
-y2 <- cases
+y1 <- controls_probs
+y2 <- cases_probs
 
 data <- data.frame(x=x,y1=y1,y2=y2)
 melted <- melt(data,id="x")
@@ -42,8 +42,8 @@ cases <- count(incident_af$pred_risk_C2HEST_Final)
 cases_probs <- cases[,2] / nrow(cases)
 
 x <- factor(0:(length(cases_probs)-1)) 
-y1 <- controls
-y2 <- cases
+y1 <- controls_probs
+y2 <- cases_probs
 
 data <- data.frame(x=x,y1=y1,y2=y2)
 melted <- melt(data,id="x")
