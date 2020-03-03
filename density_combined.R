@@ -16,7 +16,7 @@ controls_probs <- controls[,2] / nrow(controls)
 cases <- count(incident_af$pred_risk_CHA2DS2_VASc_Final)
 cases_probs <- cases[,2] / nrow(cases)
 
-x <- factor(0:length(cases_probs)) 
+x <- factor(0:(length(cases_probs)-1))
 y1 <- controls
 y2 <- cases
 
@@ -25,7 +25,7 @@ melted <- melt(data,id="x")
 
 # Plot
 ggplot(melted,aes(x=x,y=value,fill=variable)) + geom_bar(stat='identity',position='identity',alpha=0.55,width=1,color='black') +
-  scale_x_discrete(breaks=seq(0,9,1),expand=c(0,0),name=expression(paste('   ',CHA[2],DS[2],-VASc,' ',Risk))) +
+  scale_x_discrete(breaks=seq(0,max(x),1),expand=c(0,0),name=expression(paste('   ',CHA[2],DS[2],-VASc,' ',Risk))) +
   scale_y_continuous(breaks=seq(0,0.3,0.05),expand=c(0,0),limits=c(0,0.30),name='frequency') +
   scale_fill_manual(values=c("#2b8cbe","#f03b20"),name='',labels=c('No AF','AF')) +
   theme(panel.background=element_blank(),axis.line=element_line(color='black'),legend.position=c(0.85,0.90),
@@ -41,7 +41,7 @@ controls_probs <- controls[,2] / nrow(controls)
 cases <- count(incident_af$pred_risk_C2HEST_Final)
 cases_probs <- cases[,2] / nrow(cases)
 
-x <- factor(0:length(cases_probs)) 
+x <- factor(0:(length(cases_probs)-1)) 
 y1 <- controls
 y2 <- cases
 
@@ -50,7 +50,7 @@ melted <- melt(data,id="x")
 
 # Plot
 ggplot(melted,aes(x=x,y=value,fill=variable)) + geom_bar(stat='identity',position='identity',alpha=0.55,width=1,color='black') +
-  scale_x_discrete(breaks=seq(0,8,1),expand=c(0,0),name=expression(paste('   ',C[2],HEST,' ',Risk))) +
+  scale_x_discrete(breaks=seq(0,max(x),1),expand=c(0,0),name=expression(paste('   ',C[2],HEST,' ',Risk))) +
   scale_y_continuous(breaks=seq(0,0.3,0.05),expand=c(0,0),limits=c(0,0.30),name='frequency') +
   scale_fill_manual(values=c("#2b8cbe","#f03b20"),name='',labels=c('No AF','AF')) +
   theme(panel.background=element_blank(),axis.line=element_line(color='black'),legend.position=c(0.85,0.90),
