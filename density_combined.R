@@ -66,8 +66,8 @@ data <- melt(x)
 
 # Density of predicted risk distribution
 ggplot() + geom_density(data=data,aes(x=value,fill=L1),alpha=0.55) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0.1),limits=c(0,15)) +   # modify x axis limits as needed
-  scale_y_continuous(breaks=seq(0,0.90,0.05),expand=c(0,0),limits=c(0,0.90)) +  # modify y axis limits as needed
+  scale_x_continuous(breaks=seq(0,30,1),expand=c(0,0.1),limits=c(0,30)) +   # modify x axis limits as needed
+  scale_y_continuous(breaks=seq(0,0.35,0.05),expand=c(0,0),limits=c(0,0.35)) +  # modify y axis limits as needed
   scale_fill_manual(values=c("#2b8cbe","#f03b20"),name='',labels=c('incident AF','no incident AF')) +
   theme(panel.background=element_blank(),axis.line=element_line(color='black'),legend.position=c(0.20,0.90),
         axis.text=element_text(size=20,color='black'),plot.margin=unit(c(0.5,0.5,0.5,0.5),'cm'),
@@ -83,8 +83,8 @@ data <- melt(x)
 
 # Density of predicted risk distribution
 ggplot() + geom_density(data=data,aes(x=value,fill=L1),alpha=0.55) +
-  scale_x_continuous(breaks=seq(0,15,1),expand=c(0,0.1),limits=c(0,15)) +   # modify x axis limits as needed
-  scale_y_continuous(breaks=seq(0,0.90,0.05),expand=c(0,0),limits=c(0,0.90)) +  # modify y axis limits as needed
+  scale_x_continuous(breaks=seq(0,30,1),expand=c(0,0.1),limits=c(0,30)) +   # modify x axis limits as needed
+  scale_y_continuous(breaks=seq(0,0.35,0.05),expand=c(0,0),limits=c(0,0.35)) +  # modify y axis limits as needed
   scale_fill_manual(values=c("#2b8cbe","#f03b20"),name='',labels=c('incident AF','no incident AF')) +
   theme(panel.background=element_blank(),axis.line=element_line(color='black'),legend.position=c(0.20,0.90),
         axis.text=element_text(size=20,color='black'),plot.margin=unit(c(0.5,0.5,0.5,0.5),'cm'),
