@@ -78,7 +78,9 @@ black_trans <- adjustcolor('black', alpha.f = 0.6)
 segments(-0.5,-0.5,25,25,col=black_trans,lwd=2,lty=2)
 
 ## Legend
-legend(-0.2,24.5,c('CHADS-VASc','CHARGE-AF','EHR-AF','C2HEST'),
-       pch=19,col=c(col1,col2,col3,col4),cex=1.5,bty='n')
+legend(-0.2,24.5,c('EHR-AF','CHARGE-AF',
+                   expression(paste(plain("CHA") [plain("2")], plain("DS") [plain("2")], plain("-VASc"))),
+                   expression(paste(plain("C") [plain("2")], plain("HEST")))),
+       pch=19,col=c(col3,col2,col1,col4),cex=1.5,bty='n')
 
 dev.off()

@@ -45,20 +45,20 @@ pdf('/data/arrhythmia/skhurshid/broad_ibm_afrisk/subgroup_phs.pdf',height=1.5,wi
     pointsize=3)
 
 par(oma=c(1,1,1,1))
-par(mar=c(4,17,1,1))
+par(mar=c(4,7.5,1,1))
 col <- c('#e31a1c','#1f78b4','#33a02c','#ff7f00','black')
 plot(x=c_all[,1],y=seq(5,1,-1),xlim=c(0.600,0.805),ylim=c(0.75,5.25),
      xaxt='n',yaxt='n',xlab='',ylab='',pch=c(rep(19,4),18),col=col,cex=c(rep(1.4,4),3),
      bty='n')
 axis(1,at=seq(0.600,0.825,0.025),cex=1.4,pos=0)
 axis(2,at=1:18,labels=FALSE,cex=1.4)
-mtext('Subgroup',side=2,line=16.5,cex=1.3)
+mtext('Subgroup',side=2,line=7,cex=1.3)
 mtext('Concordance',side=1,line=3.5,cex=1.3)
 segments(c_all[,2],5:1,c_all[,3],5:1,col=col,lwd=2)
 
 plot_names <- c('Overall','Heart Failure','Stroke','Male','Female')
 for (i in 1:length(plot_names)){
-  mtext(paste0(plot_names[i],' (N=',c_all[6-i,4],'; AF=',c_all[6-i,5],')'),
+  mtext(paste0(plot_names[i]),
         side=2,line=1,las=2,at=i)
 }
 
