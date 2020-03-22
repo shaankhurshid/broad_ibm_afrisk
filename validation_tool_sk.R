@@ -4,28 +4,26 @@ library(plyr); library(prodlim); library(data.table);
 library(survival); library(reshape2); library(rms)
 
 ## Load dataset
-
+load(file='/data/arrhythmia/skhurshid/ehr_af/vs_021219.RData')
+mydata <- vs
 
 ##############
 ### Parameters
-#FILE = 'Random_Sample_AFib_Final_SUPERMART_122_Date_2020-02-25.csv'
 FILE = 'Second_Data_Selection_Approach_AFib_Final_SUPERMART_122_Date_2020-02-17.csv'
 DIRECTORY = "Y:/ibm-rwe_global/URI/Broad/Validation_Tool/output/"; setwd(DIRECTORY)
-OUTCOME = 'is_AFib_combined'
-NUM_DAYS_TO_OUTCOME = 'num_days_to_AFib_or_to_cencor'
-SCORES = c('EHR_AF_Final', 'CHA2DS2_VASc_Final', 'CHARGE_AF_Final', 'C2HEST_Final')
-#SCORES = c('EHR_AF_Final')
-NUM_DAYS_FOLLOW_UP = 1825
+OUTCOME = 'af_5y_sal'
+NUM_DAYS_TO_OUTCOME = 'af_5y_sal_days'
+SCORES = c('score')
+NUM_DAYS_FOLLOW_UP = 1826
 B_calibrate_parameter = 10
 AGE_MIN_YEARS = 45; AGE_MAX_YEARS = 90; AGE_STEP_YEARS = 5
-##############
 
-mydata <- read.csv(file = FILE, header = TRUE, sep = ','); setDF(mydata); #colnames(mydata)
-AFib_incidence_in_entire_population = round(100 * nrow(mydata[which(mydata$is_AFib_combined == 1),]) / nrow(mydata), 2);
+##############
+AFib_incidence_in_entire_population = round(100 * nrow(mydata[which(mydata$af_5y_sal == 1),]) / nrow(mydata), 2);
 
 df_scores_final <- NULL
 
-#Select population
+# Select population
 for(is_population_restricted_by_age in seq(0, 1))
 {
   if (is_population_restricted_by_age == 0)
@@ -117,7 +115,7 @@ for (age_item in seq(AGE_MIN_YEARS, AGE_MAX_YEARS - current_AGE_STEP_YEARS, curr
     }
     
     SCORE_NAME = str_replace(SCORE_NAME, '_Final', '')
-    file_name = paste(paste(Population_type_str, SCORE_NAME, sep = "_"), '.pdf', sep = '')
+    file_name = paste('/data/arrhythmia/skhurshid/ehr_af/',paste(Population_type_str, SCORE_NAME, sep = "_"), '.pdf', sep = '')
     
     pdf(file_name,height=3,width=3,pointsize=3); par(oma=c(1,1,1,1)); par(oma=c(1,1,1,1));col2=paste(rgb(252,146,114,maxColorValue=255),sep="")
     plot(cal.score,scat1d.opts=list(frac=0.1,side=1),xlim=c(1,0.2),ylim=c(1,0.2),xaxt="n",yaxt="n", xlab="Predicted 5-year risk of AF", ylab="Proportion with AF at 5 years", subtitles=F, par.corrected=list(col=col2, lty=1, lwd=2), bty='n', cex.lab=1.25)
