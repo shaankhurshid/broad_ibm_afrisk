@@ -4,19 +4,22 @@ library(plyr); library(prodlim); library(data.table);
 library(survival); library(reshape2); library(rms)
 
 ## Load dataset
-load(file='/data/arrhythmia/skhurshid/ehr_af/vs_021219.RData')
+load(file='/Volumes/arrhythmia/skhurshid/ehr_af/vs_021219.RData')
+
+## Variable cleanup to match Uri's code
+vs$is_male <- ifelse(vs$Gender=='Male',1,0)
+vs$af_5y_sal_days <- vs$af_5y_sal.t*365.25
 mydata <- vs
 
 ##############
 ### Parameters
 FILE = 'Second_Data_Selection_Approach_AFib_Final_SUPERMART_122_Date_2020-02-17.csv'
-DIRECTORY = "Y:/ibm-rwe_global/URI/Broad/Validation_Tool/output/"; setwd(DIRECTORY)
 OUTCOME = 'af_5y_sal'
 NUM_DAYS_TO_OUTCOME = 'af_5y_sal_days'
 SCORES = c('score')
 NUM_DAYS_FOLLOW_UP = 1826
 B_calibrate_parameter = 10
-AGE_MIN_YEARS = 45; AGE_MAX_YEARS = 90; AGE_STEP_YEARS = 5
+AGE_MIN_YEARS = 45; AGE_MAX_YEARS = 95; AGE_STEP_YEARS = 5
 
 ##############
 AFib_incidence_in_entire_population = round(100 * nrow(mydata[which(mydata$af_5y_sal == 1),]) / nrow(mydata), 2);
@@ -49,12 +52,12 @@ for (age_item in seq(AGE_MIN_YEARS, AGE_MAX_YEARS - current_AGE_STEP_YEARS, curr
     min_age_for_final_df = age_item; max_age_for_final_df = age_item + current_AGE_STEP_YEARS
     if (gender_item == 0 | gender_item == 1)
     {
-    tmp_mydata = subset(mydata, age >= age_item & age <= age_item + current_AGE_STEP_YEARS & is_male == gender_item)
+    tmp_mydata = subset(mydata, start_fu_age >= age_item & start_fu_age <= age_item + current_AGE_STEP_YEARS & is_male == gender_item)
     Population_type_str = paste(paste(paste(paste(paste(paste('n = ', nrow(tmp_mydata), sep = ''), ' ', sep = ''), current_gender, sep = ''), ' Age ', age_item, sep = ''), ' to ', sep = ''), age_item + current_AGE_STEP_YEARS, sep ='')
     }
     else
     {
-      tmp_mydata = subset(mydata, age >= age_item & age <= age_item + current_AGE_STEP_YEARS)
+      tmp_mydata = subset(mydata, start_fu_age >= age_item & start_fu_age <= age_item + current_AGE_STEP_YEARS)
       Population_type_str = paste(paste(paste(paste(paste(paste('n = ', nrow(tmp_mydata), sep = ''), ' ', sep = ''), current_gender, sep = ''), ' Age ', age_item, sep = ''), ' to ', sep = ''), age_item + current_AGE_STEP_YEARS, sep ='')
     }
   }
@@ -63,12 +66,12 @@ for (age_item in seq(AGE_MIN_YEARS, AGE_MAX_YEARS - current_AGE_STEP_YEARS, curr
     min_age_for_final_df = age_item; max_age_for_final_df = age_item + current_AGE_STEP_YEARS - 1
     if (gender_item == 0 | gender_item == 1)
     {
-    tmp_mydata = subset(mydata, age >= age_item & age < age_item + current_AGE_STEP_YEARS & is_male == gender_item)
+    tmp_mydata = subset(mydata, start_fu_age >= age_item & start_fu_age < age_item + current_AGE_STEP_YEARS & is_male == gender_item)
     Population_type_str = paste(paste(paste(paste(paste(paste('n=', nrow(tmp_mydata), sep = ''), ' ', sep = ''), current_gender, sep = ''), ' Age ', age_item, sep = ''), ' to ', sep = ''), age_item + current_AGE_STEP_YEARS - 1, sep ='')
     }
     else
     {
-      tmp_mydata = subset(mydata, age >= age_item & age < age_item + current_AGE_STEP_YEARS)
+      tmp_mydata = subset(mydata, start_fu_age >= age_item & start_fu_age < age_item + current_AGE_STEP_YEARS)
       Population_type_str = paste(paste(paste(paste(paste(paste('n = ', nrow(tmp_mydata), sep = ''), ' ', sep = ''), current_gender, sep = ''), ' Age ', age_item, sep = ''), ' to ', sep = ''), age_item + current_AGE_STEP_YEARS - 1, sep ='')
     }
   }
@@ -115,7 +118,7 @@ for (age_item in seq(AGE_MIN_YEARS, AGE_MAX_YEARS - current_AGE_STEP_YEARS, curr
     }
     
     SCORE_NAME = str_replace(SCORE_NAME, '_Final', '')
-    file_name = paste('/data/arrhythmia/skhurshid/ehr_af/',paste(Population_type_str, SCORE_NAME, sep = "_"), '.pdf', sep = '')
+    file_name = paste('/Volumes/arrhythmia/skhurshid/ehr_af/',paste(Population_type_str, SCORE_NAME, sep = "_"), '.pdf', sep = '')
     
     pdf(file_name,height=3,width=3,pointsize=3); par(oma=c(1,1,1,1)); par(oma=c(1,1,1,1));col2=paste(rgb(252,146,114,maxColorValue=255),sep="")
     plot(cal.score,scat1d.opts=list(frac=0.1,side=1),xlim=c(1,0.2),ylim=c(1,0.2),xaxt="n",yaxt="n", xlab="Predicted 5-year risk of AF", ylab="Proportion with AF at 5 years", subtitles=F, par.corrected=list(col=col2, lty=1, lwd=2), bty='n', cex.lab=1.25)
@@ -138,5 +141,5 @@ for (age_item in seq(AGE_MIN_YEARS, AGE_MAX_YEARS - current_AGE_STEP_YEARS, curr
 }
 }
 
-write.table(df_scores_final, file = "Calibration_results.csv", quote = FALSE, row.names = FALSE, sep = '\t')
+write.table(df_scores_final, file = "/Volumes/arrhythmia/skhurshid/ehr_af/Calibration_results.csv", quote = FALSE, row.names = FALSE, sep = '\t')
 
