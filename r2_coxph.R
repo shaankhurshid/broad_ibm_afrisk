@@ -13,7 +13,7 @@ boot <- function(time,status,response,data,runs,size){
     n_r2[i] <- r2/max_r2
     print(paste0('run ',i,' complete')
   }
-  return(out)
+  return(n_r2)
 }
 
 ## AF
