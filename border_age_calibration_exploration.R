@@ -110,10 +110,10 @@ x <- charge_old_pred$V1
 y <- charge_old_obv[,1]*100
 
 plot(x,y,xlab='',ylab='',yaxt='n',
-     xaxt='n',xlim=c(0,20),ylim=c(0,20),pch=19,cex=1.5)
+     xaxt='n',xlim=c(0,10),ylim=c(0,10),pch=19,cex=1.5)
 
-axis(1,at=seq(0,20,2),cex.axis=1.7)
-axis(2,cex.axis=1.6,at=seq(0,20,2),las=1)
+axis(1,at=seq(0,10,1),cex.axis=1.7)
+axis(2,cex.axis=1.6,at=seq(0,10,1),las=1)
 
 segments(-1,-1,51,51,lwd=1.2,lty=2)
 
@@ -130,25 +130,3 @@ close[,':='(charge_pred5_above5 = ifelse(charge.pred5 >= 0.05,1,0),
 charge_compare <- nricens(p.std=close$charge_pred5_above5, p.new=close$charge_old_pred5_above5,
                               time=close$af_5y_sal.t, event=close$af_5y_sal, cut=0.5,
                               niter = 10, t0=5,updown='category')
-
-pdf(file='/data/arrhythmia/skhurshid/broad_ibm_afrisk/score_cal.pdf',height=5,width=5,
-    pointsize=3)
-par(oma=c(2,3,1,1))
-par(oma=c(2,3,1,1))
-
-x <- score_pred$V1*100
-y <- score_obv[,1]*100
-
-plot(x,y,xlab='',ylab='',yaxt='n',
-     xaxt='n',xlim=c(0,10),ylim=c(0,10),pch=19,cex=1.5)
-
-axis(1,at=seq(0,10,1),cex.axis=1.7)
-axis(2,cex.axis=1.6,at=seq(0,10,1),las=1)
-
-segments(-1,-1,11,11,lwd=1.2,lty=2)
-
-mtext("EHR-AF Original",side=3,cex=1.7,line=2)
-mtext("Predicted risk of AF at 5 years (%)",side=1,cex=1.7,line=3)
-mtext("Incidence of AF at 5 years (%)",side=2,cex=1.7,line=4.5)
-
-dev.off()

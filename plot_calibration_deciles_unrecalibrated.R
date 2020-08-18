@@ -15,8 +15,8 @@ plot(x=charge$x,y=charge$y,xlim=c(0,30),ylim=c(0,30),xaxt='n',yaxt='n',
 axis(1,at=seq(0,30,5),cex.axis=1.4)
 axis(2,at=seq(0,30,5),cex.axis=1.4,las=2)
 
-mtext("Predicted 5-year risk of AF",1,cex=1.8,line=3)
-mtext("Proportion with AF at 5 years",2,cex=1.8,line=3)
+mtext("Predicted 5-year risk of AF (%)",1,cex=1.8,line=3)
+mtext("5-year cumulative incidence of AF (%)",2,cex=1.8,line=3.5)
 mtext("CHARGE-AF",3,cex=2,line=0)
 
 segments(0,0,31,31,col='darkgray',lty=5)
@@ -38,8 +38,8 @@ plot(x=ehraf$x,y=ehraf$y,xlim=c(0,30),ylim=c(0,30),xaxt='n',yaxt='n',
 axis(1,at=seq(0,30,5),cex.axis=1.4)
 axis(2,at=seq(0,30,5),cex.axis=1.4,las=2)
 
-mtext("Predicted 5-year risk of AF",1,cex=1.8,line=3)
-mtext("Proportion with AF at 5 years",2,cex=1.8,line=3)
+mtext("Predicted 5-year risk of AF (%)",1,cex=1.8,line=3)
+mtext("5-year cumulative incidence of AF (%)",2,cex=1.8,line=3.5)
 mtext("EHR-AF",3,cex=2,line=0)
 
 segments(0,0,31,31,col='darkgray',lty=5)
