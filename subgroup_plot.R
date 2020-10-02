@@ -15,7 +15,7 @@ all <- data.frame(Score_Name='EHR_AF_Final',Low_CI=0.782,CI_value=0.783,High_CI=
 # Collapse EHR_AF results only
 ehr <- rbind(all[1,],hf[Score_Name=='EHR_AF_Final'],
              stroke[Score_Name=='EHR_AF_Final'],
-             race[subgroup=='white',1:8],race[subgroup=='non-white',1:8],
+             race[subgroup=='non-white',1:8],race[subgroup=='white',1:8],
              m[Score_Name=='EHR_AF_Final'],f[Score_Name=='EHR_AF_Final'])
 ehr$subgroup <- c('Overall','Heart failure','Stroke','Nonwhite','White','Males','Females')
 

@@ -3,12 +3,12 @@
 library(data.table)
 
 # Load input data
-coord <- fread('/data/arrhythmia/skhurshid/broad_ibm_afrisk/pred_obv_input2.csv')
-input <- fread('/data/arrhythmia/skhurshid/broad_ibm_afrisk/pred_obv_input.csv')
+coord <- fread('/Volumes/arrhythmia/skhurshid/broad_ibm_afrisk/pred_obv_input2.csv')
+input <- fread('/Volumes/arrhythmia/skhurshid/broad_ibm_afrisk/pred_obv_input.csv')
 
 # Plotting
 # Open file connection
-pdf("/data/arrhythmia/skhurshid/broad_ibm_afrisk/pred_obv_lines.pdf",height=5,width=5,
+pdf("~/pred_obv_lines.pdf",height=5,width=5,
     pointsize=1)
 
 ## Params
@@ -35,7 +35,7 @@ plot(x=c(x1,x2,x3,x4),y=c(chads,charge,ehraf,chest),
      pch=19,
      col=c(rep(col1,length(x1)),rep(col2,length(x2)),rep(col3,length(x3)),rep(col4,length(x4))),
      xlim=c(-0.5,26),ylim=c(0,25),
-     xaxt='n',yaxt='n',xlab='',ylab='',cex=1.4,frame.plot = F)
+     xaxt='n',yaxt='n',xlab='',ylab='',cex=1.8,frame.plot = F)
 
 ## CIs
 segments(x1,input[V4=='CHADS-VASc']$V2,x1,input[V4=='CHADS-VASc']$V3,col=col1)
@@ -44,12 +44,12 @@ segments(x3,input[V4=='EHR-AF']$V2,x3,input[V4=='EHR-AF']$V3,col=col3)
 segments(x4,input[V4=='C2HEST']$V2,x4,input[V4=='C2HEST']$V3,col=col4)
 
 ## Axes
-axis(side=1,cex.axis=1.5,at=seq(0,25,5),labels=seq(0,25,5),pos=-0.5)
-axis(side=2,cex.axis=1.5,at=seq(0,25,5),labels=seq(0,25,5),las=1,pos=-0.5)
+axis(side=1,cex.axis=2.2,at=seq(0,25,5),labels=seq(0,25,5),pos=-0.5)
+axis(side=2,cex.axis=2.2,at=seq(0,25,5),labels=seq(0,25,5),las=1,pos=-0.5)
 
 ## Labels
-mtext(side=2,"Observed 5-Year AF (%)",line=1.8,cex=1.6)
-mtext(side=1,"Predicted 5-Year AF Risk (%)",line=3,cex=1.6)
+mtext(side=2,"Observed 5-Year AF (%)",line=2.5,cex=2.5)
+mtext(side=1,"Predicted 5-Year AF Risk (%)",line=3,cex=2.5)
 
 ## Segments
 segments(0,-0.5,-0.5,-0.5)
@@ -81,6 +81,6 @@ segments(-0.5,-0.5,25,25,col=black_trans,lwd=2,lty=2)
 legend(-0.2,24.5,c('EHR-AF','CHARGE-AF',
                    expression(paste(plain("CHA") [plain("2")], plain("DS") [plain("2")], plain("-VASc"))),
                    expression(paste(plain("C") [plain("2")], plain("HEST")))),
-       pch=19,col=c(col3,col2,col1,col4),cex=1.5,bty='n')
+       pch=19,col=c(col3,col2,col1,col4),cex=2.2,bty='n')
 
 dev.off()
