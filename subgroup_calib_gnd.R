@@ -8,7 +8,7 @@ setDT(vs)
 # Script to explore coefficients in subgroups
 
 ## Source helper functions
-# A. GND function
+# A. KM function
 kmdec=function(dec.num,dec.name, datain, adm.cens){
   stopped=0
   data.sub=datain[datain[,dec.name]==dec.num,]
@@ -29,6 +29,7 @@ kmdec=function(dec.num,dec.name, datain, adm.cens){
   c(avsurv.est, avsurv.stderr, avsurv.num, dec.num, stopped) 
 }#kmdec
 
+# B. GND function
 GND.calib = function(pred, tvar, out, cens.t, groups, adm.cens){
   output <- list()
   
@@ -65,7 +66,7 @@ Consider collapsing some groups to avoid this problem.")
   return(output)
 }
 
-# B. Quantile sorter
+# C. Quantile sorter
 classifier <- function(risk,ncuts){
   cuts <- quantile(risk,probs=seq(0,1,1/ncuts))
   index <- rep(NA,length(risk))
