@@ -6,7 +6,8 @@ load(file='/data/arrhythmia/skhurshid/ehr_af/vs_032120.RData')
 
 # Script to explore coefficients in subgroups
 
-# GND function
+## Source helper functions
+# A. GND function
 kmdec=function(dec.num,dec.name, datain, adm.cens){
   stopped=0
   data.sub=datain[datain[,dec.name]==dec.num,]
@@ -61,7 +62,7 @@ Consider collapsing some groups to avoid this problem.")
   c(df=numcat-1, chi2gw=sum(hltab$GND_component),pvalgw=1-pchisq(sum(hltab$GND_component),numcat-1))
 }
 
-# Quantile sorter
+# B. Quantile sorter
 classifier <- function(risk,ncuts){
   cuts <- quantile(risk,probs=seq(0,1,1/ncuts))
   index <- rep(NA,length(risk))
@@ -71,10 +72,11 @@ classifier <- function(risk,ncuts){
   return(index)
 }
 
-# Define explore function
+## Define explore function for continuous variables
 explore_age <- function(time,status,age_variable,min_age,max_age,
                         age_step,data,risk_score,path=getwd(),
-                        pred_risk,threshold,calib_quantiles=10,censor.t=5){
+                        pred_risk,threshold,calib_quantiles=10,censor.t=5,
+                        make_plot=TRUE){
   i <- 1
   out <- list()
   for (age in seq(min_age,max_age,age_step)){
@@ -95,13 +97,14 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       gnd <- GND.calib(pred=subset[[pred_risk]],tvar=subset[[time]],out=subset[[status]],groups=subset$calib_groups,
                        cens.t=subset$censored,adm.cens = censor.t)
       
+      if (make_plot == TRUE){
+      # Plotting component
       obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
       pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
-      
       pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
       plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
       segments(-1,-1,101,101,lty=5)
-      dev.off()
+      dev.off()}
       
       if (tp == 0 | tn == 0 | test_pos == 0 | dz_pos == 0){
         ppv <- c(tp/test_pos,NA,NA); npv <- c(tn/test_neg,NA,NA); sens <- c(tp/dz_pos,NA,NA); spec <- c(tn/dz_neg,NA,NA)
@@ -145,13 +148,14 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       gnd <- GND.calib(pred=subset[[pred_risk]],tvar=subset[[time]],out=subset[[status]],groups=subset$calib_groups,
                        cens.t=subset$censored,adm.cens = censor.t)
       
-      obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
-      pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
-      
-      pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
-      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
-      segments(-1,-1,101,101,lty=5)
-      dev.off()
+      # Plotting component
+      if (make_plot == TRUE){
+        obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
+        pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
+        pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
+        plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
+        segments(-1,-1,101,101,lty=5)
+        dev.off()}
       
       if (tp == 0 | tn == 0 | test_pos == 0 | dz_pos == 0){
         ppv <- c(tp/test_pos,NA,NA); npv <- c(tn/test_neg,NA,NA); sens <- c(tp/dz_pos,NA,NA); spec <- c(tn/dz_neg,NA,NA)
@@ -183,9 +187,9 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
   return(data.frame(do.call(rbind,out)))
 }
 
-# Define explore function
+## Define explore function for categorical variables
 explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(),
-                                pred_risk,threshold,calib_quantiles=10,censor.t=5){
+                                pred_risk,threshold,calib_quantiles=10,censor.t=5,make_plot=TRUE){
   i <- 1
   out <- list()
   for (var in unique(data[[variable]])){
@@ -205,13 +209,14 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     gnd <- GND.calib(pred=subset[[pred_risk]],tvar=subset[[time]],out=subset[[status]],groups=subset$calib_groups,
                      cens.t=subset$censored,adm.cens = censor.t)
     
-    obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
-    pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
-    
-    pdf(file=paste0(path,'calib_',var,'.pdf'),height=3,width=3,pointsize=3)
-    plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
-    segments(-1,-1,101,101,lty=5)
-    dev.off()
+    # Plotting component
+    if (make_plot == TRUE){
+      obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
+      pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
+      pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
+      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
+      segments(-1,-1,101,101,lty=5)
+      dev.off()}
     
     if (tp == 0 | tn == 0 | test_pos == 0 | dz_pos == 0){
       ppv <- c(tp/test_pos,NA,NA); npv <- c(tn/test_neg,NA,NA); sens <- c(tp/dz_pos,NA,NA); spec <- c(tn/dz_neg,NA,NA)
