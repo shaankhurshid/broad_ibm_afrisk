@@ -85,7 +85,8 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
   for (age in seq(min_age,max_age,age_step)){
     if(age == max_age-age_step){
       subset <- data[c((get(age_variable) >= age) & (get(age_variable) < age+age_step))]
-      n_af <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+      n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+      total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
       mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
       km <- survfit(Surv(subset[[time]],subset[[status]]) ~ 1)
       ci <- c((1-km$surv[length(km$surv)])*100,
@@ -122,13 +123,13 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
         sens <- c(tp/dz_pos,binom.test(tp,dz_pos)$conf.int[1],binom.test(tp,dz_pos)$conf.int[2])
         spec <- c(tn/dz_neg,binom.test(tn,dz_neg)$conf.int[1],binom.test(tn,dz_neg)$conf.int[2])
       }
-      out[[i]] <- data.frame(matrix(ncol=26,nrow=0))
-      out[[i]] <- as.numeric(c(paste0(age),n_af,n_total,ci,
-                               as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
+      out[[i]] <- data.frame(matrix(ncol=30,nrow=0))
+      out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
+                               ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                                as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
                                relative_err,cum_relative_err,gnd[2],gnd[3],
                                ppv,npv,sens,spec))
-      names(out[[i]]) <- c('age','n_af','n_total',
+      names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                            'ci','ci_lower','ci_upper',
                            'c_stat','c_stat_lb','c_stat_ub',
                            'cal','cal_lb','cal_ub',
@@ -141,7 +142,8 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       break
     } else {
       subset <- data[c((get(age_variable) >= age) & (get(age_variable) < age+age_step))]
-      n_af <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+      n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+      total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
       mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
       km <- survfit(Surv(subset[[time]],subset[[status]]) ~ 1)
       ci <- c((1-km$surv[length(km$surv)])*100,
@@ -178,13 +180,13 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
         sens <- c(tp/dz_pos,binom.test(tp,dz_pos)$conf.int[1],binom.test(tp,dz_pos)$conf.int[2])
         spec <- c(tn/dz_neg,binom.test(tn,dz_neg)$conf.int[1],binom.test(tn,dz_neg)$conf.int[2])
       }
-      out[[i]] <- data.frame(matrix(ncol=26,nrow=0))
-      out[[i]] <- as.numeric(c(paste0(age),n_af,n_total,ci,
-                               as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
+      out[[i]] <- data.frame(matrix(ncol=30,nrow=0))
+      out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
+                               ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                                as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
                                relative_err,cum_relative_err,gnd[2],gnd[3],
                                ppv,npv,sens,spec))
-      names(out[[i]]) <- c('age','n_af','n_total',
+      names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                            'ci','ci_lower','ci_upper',
                            'c_stat','c_stat_lb','c_stat_ub',
                            'cal','cal_lb','cal_ub',
@@ -207,7 +209,8 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
   out <- list()
   for (var in unique(data[[variable]])){
     subset <- data[get(variable)==var]
-    n_af <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+    n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+    total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
     mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
     km <- survfit(Surv(subset[[time]],subset[[status]]) ~ 1)
     ci <- c((1-km$surv[length(km$surv)])*100,
@@ -244,13 +247,13 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
       sens <- c(tp/dz_pos,binom.test(tp,dz_pos)$conf.int[1],binom.test(tp,dz_pos)$conf.int[2])
       spec <- c(tn/dz_neg,binom.test(tn,dz_neg)$conf.int[1],binom.test(tn,dz_neg)$conf.int[2])
     }
-    out[[i]] <- data.frame(matrix(ncol=26,nrow=0))
-    out[[i]] <- as.numeric(c(paste0(age),n_af,n_total,ci,
-                             as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
+    out[[i]] <- data.frame(matrix(ncol=30,nrow=0))
+    out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
+                             ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                              as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
                              relative_err,cum_relative_err,gnd[2],gnd[3],
                              ppv,npv,sens,spec))
-    names(out[[i]]) <- c('age','n_af','n_total',
+    names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                          'ci','ci_lower','ci_upper',
                          'c_stat','c_stat_lb','c_stat_ub',
                          'cal','cal_lb','cal_ub',
@@ -268,8 +271,8 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
 # Run explore functions
 output_age <- explore_age(time='af_5y_sal.t',status='af_5y_sal',min_age=45,max_age=95,age_step=5,
                           age_variable='start_fu_age',data=vs,path='/data/arrhythmia/skhurshid/broad_ibm_afrisk/',
-                          risk_score='score',pred_risk='pred5',threshold=0.05,plot=TRUE)
+                          risk_score='score',pred_risk='pred5',threshold=0.05,make_plot=TRUE)
 
 output_sex <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='Gender',
                                   data=vs,risk_score='score',pred_risk='pred5',
-                                  path='/data/arrhythmia/skhurshid/broad_ibm_afrisk/',threshold=0.05,plot=TRUE)
+                                  path='/data/arrhythmia/skhurshid/broad_ibm_afrisk/',threshold=0.05,make_plot=TRUE)
