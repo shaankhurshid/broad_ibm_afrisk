@@ -85,7 +85,7 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
   out <- list()
   for (age in seq(min_age,max_age,age_step)){
     if(age == max_age-age_step){
-      subset <- data[c((get(age_variable) >= age) & (get(age_variable) < age+age_step))]
+      subset <- data[c((get(age_variable) >= age) & (get(age_variable) <= age+age_step))]
       n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
       total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
       mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
@@ -105,14 +105,15 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
                            cens.t=subset$censored,adm.cens = censor.t)
       gnd <- gnd_obj[[2]]
       relative_err <- mean(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
-      cum_relative_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
+      cum_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc))
       
       # Plotting component
       if (make_plot == TRUE){
       obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
       pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
+      y_lim <- x_lim <- (max(obv,pred$V1) %/% 5)*5+5
       pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
-      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
+      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
       segments(-1,-1,101,101,lty=5)
       dev.off()}
       
@@ -128,13 +129,13 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
                                ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                                as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
-                               relative_err,cum_relative_err,gnd[2],gnd[3],
+                               relative_err,cum_err,gnd[2],gnd[3],
                                ppv,npv,sens,spec))
       names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                            'ci','ci_lower','ci_upper',
                            'c_stat','c_stat_lb','c_stat_ub',
                            'cal','cal_lb','cal_ub',
-                           'rel_error_mean','rel_error_sum','gnd_chisq','gnd_p',
+                           'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                            'ppv','ppv_lower','ppv_upper',
                            'npv','npv_lower','npv_upper',
                            'sens','sens_lower','sens_upper',
@@ -162,14 +163,15 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
                            cens.t=subset$censored,adm.cens = censor.t)
       gnd <- gnd_obj[[2]]
       relative_err <- mean(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
-      cum_relative_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
+      cum_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc))
       
       # Plotting component
       if (make_plot == TRUE){
         obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
         pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
+        y_lim <- x_lim <- (max(obv,pred$V1) %/% 5)*5+5
         pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
-        plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
+        plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
         segments(-1,-1,101,101,lty=5)
         dev.off()}
       
@@ -185,13 +187,13 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
                                ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                                as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
-                               relative_err,cum_relative_err,gnd[2],gnd[3],
+                               relative_err,cum_err,gnd[2],gnd[3],
                                ppv,npv,sens,spec))
       names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                            'ci','ci_lower','ci_upper',
                            'c_stat','c_stat_lb','c_stat_ub',
                            'cal','cal_lb','cal_ub',
-                           'rel_error_mean','rel_error_sum','gnd_chisq','gnd_p',
+                           'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                            'ppv','ppv_lower','ppv_upper',
                            'npv','npv_lower','npv_upper',
                            'sens','sens_lower','sens_upper',
@@ -229,14 +231,15 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
                          cens.t=subset$censored,adm.cens = censor.t)
     gnd <- gnd_obj[[2]]
     relative_err <- mean(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
-    cum_relative_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc)/gnd_obj[[1]]$kmperc)
+    cum_err <- sum(abs(gnd_obj[[1]]$expectedperc-gnd_obj[[1]]$kmperc))
     
     # Plotting component
     if (make_plot == TRUE){
       obv <- subset[,lapply(.SD,mean),by='calib_groups',.SDcols=status][order(calib_groups),get(status)]*100
       pred <- subset[,mean(get(pred_risk)),by='calib_groups'][order(calib_groups)]
+      y_lim <- x_lim <- (max(obv,pred$V1) %/% 5)*5+5
       pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
-      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,30),ylim=c(0,30),pch=19)
+      plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
       segments(-1,-1,101,101,lty=5)
       dev.off()}
     
@@ -252,13 +255,13 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
                              ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
                              as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
-                             relative_err,cum_relative_err,gnd[2],gnd[3],
+                             relative_err,cum_err,gnd[2],gnd[3],
                              ppv,npv,sens,spec))
     names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                          'ci','ci_lower','ci_upper',
                          'c_stat','c_stat_lb','c_stat_ub',
                          'cal','cal_lb','cal_ub',
-                         'rel_error_mean','rel_error_sum','gnd_chisq','gnd_p',
+                         'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                          'ppv','ppv_lower','ppv_upper',
                          'npv','npv_lower','npv_upper',
                          'sens','sens_lower','sens_upper',
@@ -270,7 +273,7 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
 }
 
 # Run explore functions
-output_age <- explore_age(time='af_5y_sal.t',status='af_5y_sal',min_age=45,max_age=95,age_step=5,
+output_age <- explore_age(time='af_5y_sal.t',status='af_5y_sal',min_age=45,max_age=65,age_step=5,
                           age_variable='start_fu_age',data=vs,path='/data/arrhythmia/skhurshid/broad_ibm_afrisk/',
                           risk_score='score',pred_risk='pred5',threshold=0.05,make_plot=TRUE)
 
