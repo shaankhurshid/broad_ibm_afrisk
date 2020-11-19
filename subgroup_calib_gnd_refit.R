@@ -5,103 +5,46 @@ library(data.table); library(survival)
 load(file='/data/arrhythmia/skhurshid/ehr_af/vs_032120.RData')
 setDT(vs)
 
-# Script to explore coefficients in subgroups
-
-## Source helper functions
-# A. KM function
-kmdec=function(dec.num,dec.name, datain, adm.cens){
-  stopped=0
-  data.sub=datain[datain[,dec.name]==dec.num,]
-  if (sum(data.sub$out)>1){
-    avsurv=survfit(Surv(tvar,out) ~ 1, data=datain[datain[,dec.name]==dec.num,], error="g")
-    avsurv.est=ifelse(min(avsurv$time)<=adm.cens,avsurv$surv[avsurv$time==max(avsurv$time[avsurv$time<=adm.cens])],1)
-    
-    avsurv.stderr=ifelse(min(avsurv$time)<=adm.cens,avsurv$std.err[avsurv$time==max(avsurv$time[avsurv$time<=adm.cens])],0)
-    avsurv.stderr=avsurv.stderr*avsurv.est
-    
-    avsurv.num=ifelse(min(avsurv$time)<=adm.cens,avsurv$n.risk[avsurv$time==max(avsurv$time[avsurv$time<=adm.cens])],0)
-    
-  } else {
-    return(c(0,0,0,0,stopped=-1))
-  }
-  
-  if (sum(data.sub$out)<5) stopped=1
-  c(avsurv.est, avsurv.stderr, avsurv.num, dec.num, stopped) 
-}#kmdec
-
-# B. GND function
-GND.calib = function(pred, tvar, out, cens.t, groups, adm.cens){
-  output <- list()
-  
-  tvar.t=ifelse(tvar>adm.cens, adm.cens, tvar)
-  out.t=ifelse(tvar>adm.cens, 0, out)
-  
-  datause=data.frame(pred=pred, tvar=tvar.t, out=out.t, count=1, cens.t=cens.t, dec=groups)
-  numcat=length(unique(datause$dec))
-  groups=sort(unique(datause$dec))
-  
-  kmtab=matrix(unlist(lapply(groups,kmdec,"dec",datain=datause, adm.cens)),ncol=5, byrow=TRUE)
-  
-  if (any(kmtab[,5] == -1)) stop("Stopped because at least one of the groups contains <2 events. Consider collapsing some groups.")
-  else if (any(kmtab[,5] == 1)) warning("At least one of the groups contains < 5 events. GND can become unstable.\ 
-(see Demler, Paynter, Cook 'Tests of Calibration and Goodness of Fit in the Survival Setting' DOI: 10.1002/sim.6428) \
-Consider collapsing some groups to avoid this problem.")
-  
-  hltab=data.frame(group=kmtab[,4],
-                   totaln=tapply(datause$count,datause$dec,sum),
-                   censn=tapply(datause$cens.t,datause$dec,sum),
-                   numevents=tapply(datause$out,datause$dec,sum),
-                   expected=tapply(datause$pred,datause$dec,sum),
-                   kmperc=1-kmtab[,1], 
-                   kmvar=kmtab[,2]^2, 
-                   kmnrisk=kmtab[,3],
-                   expectedperc=tapply(datause$pred,datause$dec,mean))
-  
-  hltab$kmnum=hltab$kmperc*hltab$totaln
-  hltab$GND_component=ifelse(hltab$kmvar==0, 0,(hltab$kmperc-hltab$expectedperc)^2/(hltab$kmvar))
-  
-  print(hltab[c(1,2,3,4,10,5,6,9,7,11)], digits=4)
-  output[[1]] <- hltab[c(1,2,3,4,10,5,6,9,7,11)]
-  output[[2]] <- c(df=numcat-1, chi2gw=sum(hltab$GND_component),pvalgw=1-pchisq(sum(hltab$GND_component),numcat-1))
-  return(output)
-}
-
-# C. Quantile sorter
-classifier <- function(risk,ncuts){
-  cuts <- quantile(risk,probs=seq(0,1,1/ncuts))
-  index <- rep(NA,length(risk))
-  for (i in 1:(length(cuts)-1)){
-    for (j in 1:length(risk)){
-      index[j] <- ifelse(risk[j] >= cuts[i],i,index[j])}}
-  return(index)
-}
-
 ## Define explore function for continuous variables (input must be data.table)
-explore_age <- function(time,status,age_variable,min_age,max_age,
-                        age_step,data,risk_score,path=getwd(),
-                        pred_risk,threshold,calib_quantiles=10,censor.t=5,
-                        make_plot=TRUE,all_pop=TRUE){
+explore_continuous_recal <- function(time,status,age_variable,min_age,max_age,variables_list,
+                            age_step,dataset,path=getwd(),threshold,
+                            calib_quantiles=10,censor.t=5,
+                            make_plot=TRUE,all_pop=TRUE){
   i <- 1
   out <- list()
   for (age in seq(min_age,max_age-age_step,age_step)){
     
     if(age == max_age-age_step){
-      subset <- data[c((get(age_variable) >= age) & (get(age_variable) <= age+age_step))] 
+      subset <- dataset[c((get(age_variable) >= age) & (get(age_variable) <= age+age_step))] 
     } else { 
-      subset <- data[c((get(age_variable) >= age) & (get(age_variable) < age+age_step))] }
-    
+      subset <- dataset[c((get(age_variable) >= age) & (get(age_variable) < age+age_step))] }
       n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
+      
       total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
-      mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
       km <- survfit(Surv(subset[[time]],subset[[status]]) ~ 1)
       ci <- c((1-km$surv[length(km$surv)])*100,
               (1-km$upper[length(km$upper)])*100,
               (1-km$lower[length(km$lower)])*100)
-      tp <- nrow(subset[c((get(pred_risk) >= threshold) & get(status)==1)])
-      tn <- nrow(subset[c((get(pred_risk) < threshold) & get(status)==0)])
-      test_pos <- nrow(subset[get(pred_risk) >= threshold]); test_neg <- nrow(subset[get(pred_risk) < threshold])
+      
+      # Refit model
+      new_formula <- formula(paste0('Surv(subset[,get(time)],subset[,get(status)]) ~ ',paste0(variables_list,collapse=' + ')))
+      mod <- coxph(new_formula,data=subset)
+      subset[,lp := predict(mod,type='lp')]
+      
+      # Calculate predicted risk with recalibration
+      avg_beta <- mean(subset$lp)
+      res <- coxph(Surv(subset[,get(time)],subset[,get(status)]) ~ lp, data=subset)
+      km <- survfit(res, data=data.frame(x1=mean(lp)),type="kaplan-meier")
+      s0 <- summary(km, times=c(5))$surv
+      subset[,pred_risk := (1-(s0)^exp(lp - (avg_beta)))]
+
+      # Sens/spec metrics
+      tp <- nrow(subset[c(pred_risk >= threshold & get(status)==1)])
+      tn <- nrow(subset[c(pred_risk < threshold & get(status)==0)])
+      test_pos <- nrow(subset[pred_risk >= threshold]); test_neg <- nrow(subset[pred_risk < threshold])
       dz_pos <- nrow(subset[get(status)==1]); dz_neg <- nrow(subset[get(status)==0])
-      subset[,':='(calib_groups = classifier(risk=get(pred_risk),ncuts=calib_quantiles),
+      
+      subset[,':='(calib_groups = classifier(risk=subset$pred_risk,ncuts=calib_quantiles),
                    censored = ifelse(get(status)==0,1,0))]
       
       # GND component
@@ -114,11 +57,11 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       # Plotting component
       if (make_plot == TRUE){
         # risk_data = stratum; event = desired event; time = time to event (IN YEARS); breakpoint = time to evaluate (IN YEARS)
-        incidence <- survivor(data=subset,risk_data="calib_groups",event=status,time=time,breakpoint=5)
+        incidence <- survivor(data=subset,risk_data="calib_groups",event=event,time=time,breakpoint=5)
         obv <- incidence$est*100
-        pred <- subset[,mean(get(pred_risk)),by='calib_groups']; setorder(pred,calib_groups)
+        pred <- subset[,mean(pred_risk),by='calib_groups']; setorder(pred,calib_groups)
         y_lim <- x_lim <- (max(obv,pred$V1*100,na.rm=T) %/% 5)*5+5
-        pdf(file=paste0(path,'calib_',age,'.pdf'),height=3,width=3,pointsize=3)
+        pdf(file=paste0(path,'recalib_',age,'.pdf'),height=3,width=3,pointsize=3)
         plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
         segments(-1,-1,101,101,lty=5)
         dev.off()}
@@ -134,15 +77,17 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       }
       
       # Writing output
-      out[[i]] <- data.frame(matrix(ncol=30,nrow=0))
+      out[[i]] <- data.frame(matrix(ncol=32,nrow=0))
       out[[i]] <- as.numeric(c(paste0(age),n_event,n_total,total_pt,event_ir,
                                ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
-                               as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
+                               s0,avg_beta,
+                               as.numeric(res$coefficients[1]),as.numeric(res$coefficients[1]-1.96*summary(res)$coefficients[3]),as.numeric(res$coefficients[1]+1.96*summary(res)$coefficients[3]),
                                relative_err,cum_err,gnd[2],gnd[3],
                                ppv,npv,sens,spec))
       names(out[[i]]) <- c('age','n_event','n_total','total_pt','event_ir',
                            'ci','ci_lower','ci_upper',
                            'c_stat','c_stat_lb','c_stat_ub',
+                           's0','avg_beta',
                            'cal','cal_lb','cal_ub',
                            'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                            'ppv','ppv_lower','ppv_upper',
@@ -155,7 +100,7 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
       i <- i+1
   }
   if (all_pop==TRUE){
-    subset <- data
+    subset <- dataset
     n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
     total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
     mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
@@ -163,11 +108,25 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
     ci <- c((1-km$surv[length(km$surv)])*100,
             (1-km$upper[length(km$upper)])*100,
             (1-km$lower[length(km$lower)])*100)
-    tp <- nrow(subset[c((get(pred_risk) >= threshold) & get(status)==1)])
-    tn <- nrow(subset[c((get(pred_risk) < threshold) & get(status)==0)])
-    test_pos <- nrow(subset[get(pred_risk) >= threshold]); test_neg <- nrow(subset[get(pred_risk) < threshold])
+    
+    # Refit model
+    new_formula <- formula(paste0('Surv(subset[,get(time)],subset[,get(status)]) ~ ',paste0(variables_list,collapse=' + ')))
+    mod <- coxph(new_formula,data=subset)
+    subset[,lp := predict(mod,type='lp')]
+    
+    # Calculate predicted risk with recalibration
+    avg_beta <- mean(subset$lp)
+    res <- coxph(Surv(subset[,get(time)],subset[,get(status)]) ~ lp, data=subset)
+    km <- survfit(res, data=data.frame(x1=mean(lp)),type="kaplan-meier")
+    s0 <- summary(km, times=c(5))$surv
+    subset[,pred_risk := (1-(s0)^exp(lp - (avg_beta)))]
+    
+    # Sens/spec tests
+    tp <- nrow(subset[c(pred_risk >= threshold & get(status)==1)])
+    tn <- nrow(subset[c(pred_risk < threshold & get(status)==0)])
+    test_pos <- nrow(subset[pred_risk >= threshold]); test_neg <- nrow(subset[pred_risk < threshold])
     dz_pos <- nrow(subset[get(status)==1]); dz_neg <- nrow(subset[get(status)==0])
-    subset[,':='(calib_groups = classifier(risk=get(pred_risk),ncuts=calib_quantiles),
+    subset[,':='(calib_groups = classifier(risk=subset$pred_risk,ncuts=calib_quantiles),
                  censored = ifelse(get(status)==0,1,0))]
     
     # GND component
@@ -179,12 +138,11 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
     
     # Plotting component
     if (make_plot == TRUE){
-      # risk_data = stratum; event = desired event; time = time to event (IN YEARS); breakpoint = time to evaluate (IN YEARS)
-      incidence <- survivor(data=subset,risk_data="calib_groups",event=status,time=time,breakpoint=5)
+      incidence <- survivor(data=subset,risk_data="calib_groups",event=event,time=time,breakpoint=5)
       obv <- incidence$est*100
-      pred <- subset[,mean(get(pred_risk)),by='calib_groups']; setorder(pred,calib_groups)
+      pred <- subset[,mean(pred_risk),by='calib_groups']; setorder(pred,calib_groups)
       y_lim <- x_lim <- (max(obv,pred$V1*100,na.rm=T) %/% 5)*5+5
-      pdf(file=paste0(path,'calib_all.pdf'),height=3,width=3,pointsize=3)
+      pdf(file=paste0(path,'recalib_all.pdf'),height=3,width=3,pointsize=3)
       plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
       segments(-1,-1,101,101,lty=5)
       dev.off()}
@@ -201,15 +159,17 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
     
     # Writing output
     index <- length(out) + 1
-    out[[index]] <- data.frame(matrix(ncol=30,nrow=0))
+    out[[index]] <- data.frame(matrix(ncol=32,nrow=0))
     out[[index]] <- c('All',as.numeric(c(n_event,n_total,total_pt,event_ir,
                              ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
-                             as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
+                             s0,avg_beta,
+                             as.numeric(res$coefficients[1]),as.numeric(res$coefficients[1]-1.96*summary(res)$coefficients[3]),as.numeric(res$coefficients[1]+1.96*summary(res)$coefficients[3]),
                              relative_err,cum_err,gnd[2],gnd[3],
                              ppv,npv,sens,spec)))
     names(out[[index]]) <- c('age','n_event','n_total','total_pt','event_ir',
                          'ci','ci_lower','ci_upper',
                          'c_stat','c_stat_lb','c_stat_ub',
+                         's0','avg_beta',
                          'cal','cal_lb','cal_ub',
                          'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                          'ppv','ppv_lower','ppv_upper',
@@ -222,13 +182,13 @@ explore_age <- function(time,status,age_variable,min_age,max_age,
 }
 
 ## Define explore function for categorical variables (input must be data.table)
-explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(),
-                                pred_risk,threshold,calib_quantiles=10,censor.t=5,make_plot=TRUE,
+explore_categorical <- function(time,status,variable,dataset,path=getwd(),variables_list,
+                                threshold,calib_quantiles=10,censor.t=5,make_plot=TRUE,
                                 all_pop=TRUE){
   i <- 1
   out <- list()
   for (var in unique(data[[variable]])){
-    subset <- data[get(variable)==var]
+    subset <- dataset[get(variable)==var]
     n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
     total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
     mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
@@ -236,11 +196,25 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     ci <- c((1-km$surv[length(km$surv)])*100,
             (1-km$upper[length(km$upper)])*100,
             (1-km$lower[length(km$lower)])*100)
-    tp <- nrow(subset[c((get(pred_risk) >= threshold) & get(status)==1)])
-    tn <- nrow(subset[c((get(pred_risk) < threshold) & get(status)==0)])
-    test_pos <- nrow(subset[get(pred_risk) >= threshold]); test_neg <- nrow(subset[get(pred_risk) < threshold])
+    
+    # Refit model
+    new_formula <- formula(paste0('Surv(subset[,get(time)],subset[,get(status)]) ~ ',paste0(variables_list,collapse=' + ')))
+    mod <- coxph(new_formula,data=subset)
+    subset$lp <- predict(mod,type='lp')
+    
+    # Calculate predicted risk with recalibration
+    avg_beta <- mean(subset$lp)
+    res <- coxph(Surv(subset[,get(time)],subset[,get(status)]) ~ lp, data=subset)
+    km <- survfit(res, data=data.frame(x1=mean(lp)),type="kaplan-meier")
+    s0 <- summary(km, times=c(5))$surv
+    subset[,pred_risk := (1-(s0)^exp(lp - (avg_beta)))]
+    
+    # Tally binary test results
+    tp <- nrow(subset[c(pred_risk >= threshold & get(status)==1)])
+    tn <- nrow(subset[c(pred_risk < threshold & get(status)==0)])
+    test_pos <- nrow(subset[pred_risk >= threshold]); test_neg <- nrow(subset[pred_risk < threshold])
     dz_pos <- nrow(subset[get(status)==1]); dz_neg <- nrow(subset[get(status)==0])
-    subset[,':='(calib_groups = classifier(risk=get(pred_risk),ncuts=calib_quantiles),
+    subset[,':='(calib_groups = classifier(risk=subset$pred_risk,ncuts=calib_quantiles),
                  censored = ifelse(get(status)==0,1,0))]
     
     # GND component
@@ -253,11 +227,11 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     # Plotting component
     if (make_plot == TRUE){
       # risk_data = stratum; event = desired event; time = time to event (IN YEARS); breakpoint = time to evaluate (IN YEARS)
-      incidence <- survivor(data=subset,risk_data="calib_groups",event=status,time=time,breakpoint=5)
+      incidence <- survivor(data=subset,risk_data="calib_groups",event=event,time=time,breakpoint=5)
       obv <- incidence$est*100
-      pred <- subset[,mean(get(pred_risk)),by='calib_groups']; setorder(pred,calib_groups)
-      y_lim <- x_lim <- (max(obv,pred$V1*100) %/% 5)*5+5
-      pdf(file=paste0(path,'calib_',variable,'_',var,'.pdf'),height=3,width=3,pointsize=3)
+      pred <- subset[,mean(pred_risk),by='calib_groups']; setorder(pred,calib_groups)
+      y_lim <- x_lim <- (max(obv,pred$V1*100,na.rm=T) %/% 5)*5+5
+      pdf(file=paste0(path,'recalib_',variable,'_',var,'.pdf'),height=3,width=3,pointsize=3)
       plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
       segments(-1,-1,101,101,lty=5)
       dev.off()}
@@ -270,15 +244,17 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
       sens <- c(tp/dz_pos,binom.test(tp,dz_pos)$conf.int[1],binom.test(tp,dz_pos)$conf.int[2])
       spec <- c(tn/dz_neg,binom.test(tn,dz_neg)$conf.int[1],binom.test(tn,dz_neg)$conf.int[2])
     }
-    out[[i]] <- data.frame(matrix(ncol=30,nrow=0))
+    out[[i]] <- data.frame(matrix(ncol=32,nrow=0))
     out[[i]] <- as.numeric(c(paste0(var),n_event,n_total,total_pt,event_ir,
                              ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
-                             as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
+                             s0,avg_beta,
+                             as.numeric(res$coefficients[1]),as.numeric(res$coefficients[1]-1.96*summary(res)$coefficients[3]),as.numeric(res$coefficients[1]+1.96*summary(res)$coefficients[3]),
                              relative_err,cum_err,gnd[2],gnd[3],
                              ppv,npv,sens,spec))
     names(out[[i]]) <- c('stratum','n_event','n_total','total_pt','event_ir',
                          'ci','ci_lower','ci_upper',
                          'c_stat','c_stat_lb','c_stat_ub',
+                         's0','avg_beta',
                          'cal','cal_lb','cal_ub',
                          'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                          'ppv','ppv_lower','ppv_upper',
@@ -289,7 +265,7 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     i <- i+1
   }
   if (all_pop==TRUE){
-    subset <- data
+    subset <- dataset
     n_event <- nrow(subset[get(status)==1]); n_total <- nrow(subset)
     total_pt <- sum(subset[[time]]); event_ir <- n_event/total_pt
     mod <- coxph(Surv(subset[[time]],subset[[status]]) ~ subset[[risk_score]])
@@ -297,11 +273,25 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     ci <- c((1-km$surv[length(km$surv)])*100,
             (1-km$upper[length(km$upper)])*100,
             (1-km$lower[length(km$lower)])*100)
-    tp <- nrow(subset[c((get(pred_risk) >= threshold) & get(status)==1)])
-    tn <- nrow(subset[c((get(pred_risk) < threshold) & get(status)==0)])
-    test_pos <- nrow(subset[get(pred_risk) >= threshold]); test_neg <- nrow(subset[get(pred_risk) < threshold])
+    
+    # Refit model
+    new_formula <- formula(paste0('Surv(subset[,get(time)],subset[,get(status)]) ~ ',paste0(variables_list,collapse=' + ')))
+    mod <- coxph(new_formula,data=subset)
+    subset$lp <- predict(mod,type='lp')
+    
+    # Calculate predicted risk with recalibration
+    avg_beta <- mean(subset$lp)
+    res <- coxph(Surv(subset[,get(time)],subset[,get(status)]) ~ lp, data=subset)
+    km <- survfit(res, data=data.frame(x1=mean(lp)),type="kaplan-meier")
+    s0 <- summary(km, times=c(5))$surv
+    subset[,pred_risk := (1-(s0)^exp(lp - (avg_beta)))]
+    
+    # Binary test results
+    tp <- nrow(subset[c(pred_risk >= threshold & get(status)==1)])
+    tn <- nrow(subset[c(pred_risk < threshold & get(status)==0)])
+    test_pos <- nrow(subset[pred_risk >= threshold]); test_neg <- nrow(subset[pred_risk < threshold])
     dz_pos <- nrow(subset[get(status)==1]); dz_neg <- nrow(subset[get(status)==0])
-    subset[,':='(calib_groups = classifier(risk=get(pred_risk),ncuts=calib_quantiles),
+    subset[,':='(calib_groups = classifier(risk=subset$pred_risk,ncuts=calib_quantiles),
                  censored = ifelse(get(status)==0,1,0))]
     
     # GND component
@@ -313,12 +303,11 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     
     # Plotting component
     if (make_plot == TRUE){
-      # risk_data = stratum; event = desired event; time = time to event (IN YEARS); breakpoint = time to evaluate (IN YEARS)
-      incidence <- survivor(data=subset,risk_data="calib_groups",event=status,time=time,breakpoint=5)
+      incidence <- survivor(data=subset,risk_data="calib_groups",event=event,time=time,breakpoint=5)
       obv <- incidence$est*100
-      pred <- subset[,mean(get(pred_risk)),by='calib_groups']; setorder(pred,calib_groups)
-      y_lim <- x_lim <- (max(obv,pred$V1*100) %/% 5)*5+5
-      pdf(file=paste0(path,'calib_all.pdf'),height=3,width=3,pointsize=3)
+      pred <- subset[,mean(pred_risk),by='calib_groups']; setorder(pred,calib_groups)
+      y_lim <- x_lim <- (max(obv,pred$V1*100,na.rm=T) %/% 5)*5+5
+      pdf(file=paste0(path,'recalib_all.pdf'),height=3,width=3,pointsize=3)
       plot(pred$V1*100,obv,xlab='Predicted',ylab='Observed',xlim=c(0,x_lim),ylim=c(0,y_lim),pch=19)
       segments(-1,-1,101,101,lty=5)
       dev.off()}
@@ -335,15 +324,17 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
     
     # Writing output
     index <- length(out) + 1
-    out[[index]] <- data.frame(matrix(ncol=30,nrow=0))
+    out[[index]] <- data.frame(matrix(ncol=32,nrow=0))
     out[[index]] <- c('All',as.numeric(c(n_event,n_total,total_pt,event_ir,
                                          ci,as.numeric(summary(mod)$concordance[1]),as.numeric(summary(mod)$concordance[1]-1.96*summary(mod)$concordance[2]),as.numeric(summary(mod)$concordance[1]+1.96*summary(mod)$concordance[2]),
-                                         as.numeric(mod$coefficients[1]),as.numeric(mod$coefficients[1]-1.96*summary(mod)$coefficients[3]),as.numeric(mod$coefficients[1]+1.96*summary(mod)$coefficients[3]),
+                                         s0,avg_beta,
+                                         as.numeric(res$coefficients[1]),as.numeric(res$coefficients[1]-1.96*summary(res)$coefficients[3]),as.numeric(res$coefficients[1]+1.96*summary(res)$coefficients[3]),
                                          relative_err,cum_err,gnd[2],gnd[3],
                                          ppv,npv,sens,spec)))
     names(out[[index]]) <- c('age','n_event','n_total','total_pt','event_ir',
                              'ci','ci_lower','ci_upper',
                              'c_stat','c_stat_lb','c_stat_ub',
+                             's0','avg_beta',
                              'cal','cal_lb','cal_ub',
                              'rel_error_mean','abs_error_sum','gnd_chisq','gnd_p',
                              'ppv','ppv_lower','ppv_upper',
@@ -355,28 +346,34 @@ explore_categorical <- function(time,status,variable,data,risk_score,path=getwd(
   return(data.frame(do.call(rbind,out)))
 }
 
+# Scope covariate space
+charge_vars <- c('start_fu_age_5','race_binary','ht_cm_atStartFu_10','wt_kg_atStartFu_15','sbp_atStartFu_20',
+                 'dbp_atStartFu_10','tobacco_fin_prevAtstartFu','htn_fin_prevAtstartFu','dm_fin_prevAtstartFu',
+                 'heartFailure_fin_prevAtstartFu','mi_fin_prevAtstartFu')
+
 # Run explore functions
-output_age <- explore_age(time='af_5y_sal.t',status='af_5y_sal',min_age=45,max_age=95,age_step=5,
-                          age_variable='start_fu_age',data=vs,path='/data/arrhythmia/skhurshid/heterogeneity/',
-                          risk_score='chargeaf',pred_risk='charge.pred5',threshold=0.05,make_plot=TRUE,all_pop=TRUE)
-write.csv(output_age,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_age.csv')
+output_age_recal <- explore_continuous_recal(time='af_5y_sal.t',status='af_5y_sal',min_age=45,max_age=95,age_step=5,
+                          variables_list=charge_vars,
+                          age_variable='start_fu_age',dataset=vs,path='/data/arrhythmia/skhurshid/heterogeneity/',
+                          threshold=0.05,make_plot=TRUE,all_pop=TRUE)
+write.csv(output_age_recal,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_age_recal.csv')
 
-output_sex <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='Gender',
-                                  data=vs,risk_score='chargeaf',pred_risk='charge.pred5',
+output_sex_recal <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='Gender',
+                                  variables_list=charge_vars,dataset=vs,
                                   path='/data/arrhythmia/skhurshid/heterogeneity/',threshold=0.05,make_plot=TRUE,all_pop=TRUE)
-write.csv(output_sex,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_sex.csv')
+write.csv(output_sex_recal,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_sex_recal.csv')
 
-output_hf <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='heartFailure_fin_prevAtstartFu',
-                                  data=vs,risk_score='chargeaf',pred_risk='charge.pred5',
+output_hf_recal <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='heartFailure_fin_prevAtstartFu',
+                                  variables_list=charge_vars,dataset=vs,
                                   path='/data/arrhythmia/skhurshid/heterogeneity/',threshold=0.05,make_plot=TRUE,all_pop=TRUE)
-write.csv(output_sex,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_hf.csv')
+write.csv(output_hf_recal,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_hf_recal.csv')
 
-output_stroke <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='cvaTia_fin_prevAtstartFu',
-                                 data=vs,risk_score='chargeaf',pred_risk='charge.pred5',
+output_stroke_recal <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='cvaTia_fin_prevAtstartFu',
+                                 variables_list=charge_vars,dataset=vs,
                                  path='/data/arrhythmia/skhurshid/heterogeneity/',threshold=0.05,make_plot=TRUE,all_pop=TRUE)
-write.csv(output_sex,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_stroke.csv')
+write.csv(output_stroke_recal,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_stroke_recal.csv')
 
-output_race <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='race_binary',
-                                     data=vs,risk_score='chargeaf',pred_risk='charge.pred5',
+output_race_recal <- explore_categorical(time='af_5y_sal.t',status='af_5y_sal',variable='race_binary',
+                                     variables_list=charge_vars,dataset=vs,
                                      path='/data/arrhythmia/skhurshid/heterogeneity/',threshold=0.05,make_plot=TRUE,all_pop=TRUE)
-write.csv(output_race,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_race.csv')
+write.csv(output_race_recal,file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_race_recal.csv')
