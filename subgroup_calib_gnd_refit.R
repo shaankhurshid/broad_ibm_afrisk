@@ -1,6 +1,9 @@
 # Dependencies
 library(data.table); library(survival)
 
+# Source helper functions
+source('subgroup_suite.R')
+
 # Load data
 load(file='/data/arrhythmia/skhurshid/ehr_af/vs_032120.RData')
 setDT(vs)
