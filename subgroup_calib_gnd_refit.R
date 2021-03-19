@@ -36,9 +36,9 @@ explore_continuous_recal <- function(time,status,age_variable,min_age,max_age,va
       
       # Calculate predicted risk with recalibration
       avg_beta <- mean(subset$lp)
-      res <- coxph(Surv(subset[,get(time)],subset[,get(status)]) ~ lp, data=subset)
+      res <- coxph(Surv(subset[,time],subset[,status]) ~ lp, data=subset)
       km <- survfit(res, data=data.frame(x1=mean(lp)),type="kaplan-meier")
-      s0 <- summary(km, times=c(5))$surv
+      s0 <- summary(km, times=c(censor.t))$surv
       subset[,pred_risk := (1-(s0)^exp(lp - (avg_beta)))]
 
       # Sens/spec metrics

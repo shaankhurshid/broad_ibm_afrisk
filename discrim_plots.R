@@ -4,14 +4,14 @@
 library(data.table)
 
 # Load data
-charge_age_discrim <- fread(file='/data/arrhythmia/skhurshid/heterogeneity/charge_output_age.csv')
+charge_age_discrim <- fread(file='/data/arrhythmia/skhurshid/heterogeneity/explorys_charge_output_age.csv')
 
 # Plot discrimination versus age
-pdf(file='/data/arrhythmia/skhurshid/heterogeneity/charge_age_discrim.pdf',height=4,width=8,pointsize=5)
+pdf(file='/data/arrhythmia/skhurshid/heterogeneity/explorys_charge_age_discrim.pdf',height=4,width=8,pointsize=5)
 par(mar=c(6,1,1,1),oma=c(1,1,1,1))
 
 y_variable <- charge_age_discrim$c_stat
-col <- c(rep('#43a2ca',length(y_variable)-1),'darkgray')
+col <- c(rep('#e31a1c',length(y_variable)-1),'darkgray')
         
 plot(x=1:length(y_variable),y=y_variable,col=col,
      bty='n',xaxt='n',yaxt='n',pch=19,xlim=c(0,length(y_variable)),
